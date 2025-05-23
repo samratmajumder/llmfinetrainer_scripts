@@ -2,16 +2,36 @@
 
 This repository contains tools and scripts for preparing data and fine-tuning language models using Unsloth.
 
-## Step 1: Prepare Your Training Data
+## Installation
 
-Before you can fine-tune a model, you need to prepare your data in the right format. Use the `story_processor.py` script to convert your stories into a training dataset.
+You have two options:
 
-### Install Requirements
+### Option 1: Use the setup script (all-in-one)
+
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+### Option 2: Install components separately
+
+For data preparation only:
 
 ```bash
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
+
+For Unsloth fine-tuning:
+
+```bash
+chmod +x setup_unsloth.sh
+./setup_unsloth.sh
+```
+
+## Step 1: Prepare Your Training Data
+
+Before you can fine-tune a model, you need to prepare your data in the right format. Use the `story_processor.py` script to convert your stories into a training dataset.
 
 ### Process Stories
 
@@ -22,31 +42,40 @@ The script can process various file formats (docx, txt, html, pptx) and automati
 - Create training examples in various formats (Alpaca, ChatML, completion)
 
 ```bash
-python story_processor.py --folder /path/to/your/stories --output training_data.jsonl --format alpaca --max-tokens 2048 --overlap 1
+python story_processor.py --folder /path/to/your/stories --output training_data.jsonl --format alpaca
 ```
 
 #### Command Options:
 
 - `--folder`: Path to the folder containing story files (required)
 - `--output`: Output JSONL file path (default: "training_data.jsonl")
-- `--max-tokens`: Maximum tokens per chunk (default: 2048)
+- `--max-tokens`: Maximum tokens per chunk (default: 4096)
 - `--overlap`: Number of paragraphs to overlap between chunks (default: 1)
 - `--format`: Output format type - "alpaca", "chatml", or "completion" (default: "alpaca")
 
-## Step 2: Fine-Tune the Model
+## Step 2: Fine-Tune the Model with Unsloth
 
-Update the Script:
-Replace dataset_path with the path to your training_data.jsonl file (e.g., "C:/Users/You/training_data.jsonl" or "/home/you/training_data.jsonl").
+The fine-tuning process uses Unsloth to efficiently train a model on your story dataset.
 
-Adjust output_dir and gguf_dir to your desired output directories.
+### Run Fine-Tuning
 
-Optionally tweak hyperparameters like r (LoRA rank), learning_rate, or num_train_epochs based on your dataset size and needs.
+The tuner accepts various command-line arguments to control the fine-tuning process:
 
-Execute the Script:
-Run in a terminal:
-bash
+```bash
+python unsloth_tuner.py --max-seq-length 4096 --batch-size 2 --epochs 3
+```
 
-python finetune_mistral.py
+#### Command Options:
+
+- `--dataset`: Path to JSONL dataset file (default: "training_data.jsonl")
+- `--output-dir`: Directory for LoRA adapters (default: "./finetuned_mistral")
+- `--gguf-dir`: Directory for GGUF output (default: "./mistral_gguf")
+- `--max-seq-length`: Context length for training (default: 4096)
+- `--epochs`: Number of training epochs (default: 3)
+- `--lr`: Learning rate (default: 2e-5)
+- `--batch-size`: Per device batch size (default: 2)
+
+````
 
 The script will:
 Load the pre-quantized Mistral Small 3.1 model.
@@ -73,6 +102,8 @@ In the gguf_dir directory (e.g., ./mistral_gguf), create a file named Modelfile 
 FROM ./Mistral-Small-Instruct-2409-Q4_K_M.gguf
 TEMPLATE """{{ .Prompt }}"""
 PARAMETER stop "<|eot_id|>"
+PARAMETER context_length 16384
+PARAMETER temperature 0.7
 
 This specifies the GGUF file and the prompt template for Ollama. Adjust the filename if Unsloth names it differently (check gguf_dir for the exact GGUF file name).
 
@@ -86,11 +117,27 @@ This creates a new Ollama model named my_mistral_finetuned.
 
 Run the Model:
 Start the Ollama server (if not already running):
-bash
-
+```bash
 ollama serve
+````
 
-Test the model:
+### Testing with Different Context Lengths
+
+While the model is trained with a 4K token context, you can use it with longer contexts (up to 16K) at inference time:
+
+#### Basic Testing
+
+```bash
+./test_ollama_with_prompt.sh
+```
+
+#### Testing with Long Context (16K)
+
+```bash
+./test_long_context.sh
+```
+
+This demonstrates how a model trained on 4K context can still handle 16K context during inference, which is useful for processing longer stories or having the model remember more context from earlier in the conversation.
 bash
 
 ollama run my_mistral_finetuned

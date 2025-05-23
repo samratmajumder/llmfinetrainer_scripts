@@ -228,7 +228,7 @@ def main():
     parser = argparse.ArgumentParser(description="Process story files for LLM fine-tuning with Unsloth")
     parser.add_argument("--folder", type=str, required=True, help="Path to the folder containing story files")
     parser.add_argument("--output", type=str, default="training_data.jsonl", help="Output JSONL file path")
-    parser.add_argument("--max-tokens", type=int, default=2048, help="Maximum tokens per chunk")
+    parser.add_argument("--max-tokens", type=int, default=4096, help="Maximum tokens per chunk (default: 4096)")
     parser.add_argument("--overlap", type=int, default=1, help="Number of paragraphs to overlap between chunks")
     parser.add_argument("--format", type=str, choices=["alpaca", "chatml", "completion"], default="alpaca", 
                         help="Output format type (alpaca, chatml, or completion)")

@@ -1,15 +1,39 @@
 import torch
+import argparse
 from datasets import load_dataset
 from trl import SFTTrainer
 from transformers import TrainingArguments
 from unsloth import FastLanguageModel, get_chat_template
 
+# Helper function to check if bfloat16 is supported
+def is_bfloat16_supported():
+    return torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
+
+# Parse command line arguments
+parser = argparse.ArgumentParser(description="Fine-tune a language model with Unsloth")
+parser.add_argument("--dataset", type=str, default="training_data.jsonl", 
+                    help="Path to JSONL dataset file (default: training_data.jsonl)")
+parser.add_argument("--output-dir", type=str, default="./finetuned_mistral",
+                    help="Directory for LoRA adapters (default: ./finetuned_mistral)")
+parser.add_argument("--gguf-dir", type=str, default="./mistral_gguf",
+                    help="Directory for GGUF output (default: ./mistral_gguf)")
+parser.add_argument("--max-seq-length", type=int, default=4096,
+                    help="Context length for training (default: 4096)")
+parser.add_argument("--epochs", type=int, default=3,
+                    help="Number of training epochs (default: 3)")
+parser.add_argument("--lr", type=float, default=2e-5,
+                    help="Learning rate (default: 2e-5)")
+parser.add_argument("--batch-size", type=int, default=2,
+                    help="Per device batch size (default: 2)")
+
+args = parser.parse_args()
+
 # Configuration
 model_name = "unsloth/Mistral-Small-Instruct-2409"  # Pre-quantized 4-bit model
-dataset_path = "training_data.jsonl"  # Your JSONL dataset
-output_dir = "./finetuned_mistral"  # Directory for LoRA adapters
-gguf_dir = "./mistral_gguf"  # Directory for GGUF output
-max_seq_length = 2048  # Context length (adjust based on your stories)
+dataset_path = args.dataset
+output_dir = args.output_dir
+gguf_dir = args.gguf_dir
+max_seq_length = args.max_seq_length
 quantization_method = "q4_k_m"  # Quantization for Ollama
 
 # Load the model and tokenizer
@@ -63,12 +87,12 @@ dataset = dataset.map(format_prompts, batched=True)
 # Configure training arguments
 training_args = TrainingArguments(
     output_dir=output_dir,
-    per_device_train_batch_size=2,
+    per_device_train_batch_size=args.batch_size,
     gradient_accumulation_steps=4,
     optim="adamw_8bit",
-    learning_rate=2e-5,
+    learning_rate=args.lr,
     lr_scheduler_type="cosine",
-    num_train_epochs=3,
+    num_train_epochs=args.epochs,
     logging_steps=10,
     save_strategy="epoch",
     fp16=not is_bfloat16_supported(),  # Use fp16 if bfloat16 is not supported
@@ -88,7 +112,8 @@ trainer = SFTTrainer(
 )
 
 # Start fine-tuning
-print("Starting fine-tuning...")
+print(f"Starting fine-tuning with context length of {max_seq_length} tokens...")
+print(f"Using batch size: {args.batch_size}, learning rate: {args.lr}, epochs: {args.epochs}")
 trainer.train()
 
 # Save LoRA adapters
