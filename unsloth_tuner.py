@@ -253,14 +253,14 @@ if not args.skip_gguf:
         quantize_path = os.path.join(build_dir, "bin", "quantize")
         if is_windows:
             quantize_path += ".exe"
-          if not os.path.exists(quantize_path):
+            if not os.path.exists(quantize_path):
             # Check for newer versions of the binary name
-            alt_quantize_path = os.path.join(build_dir, "bin", "llama-quantize")
-            if is_windows:
-                alt_quantize_path += ".exe"
-            
-            if os.path.exists(alt_quantize_path):
-                quantize_path = alt_quantize_path
+                alt_quantize_path = os.path.join(build_dir, "bin", "llama-quantize")
+                if is_windows:
+                    alt_quantize_path += ".exe"
+                
+                if os.path.exists(alt_quantize_path):
+                    quantize_path = alt_quantize_path
             else:
                 print(f"Warning: Could not find quantize binary at {quantize_path} or {alt_quantize_path}")
                 
