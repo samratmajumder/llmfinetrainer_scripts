@@ -3,6 +3,7 @@
 
 import os
 import argparse
+import shutil
 from unsloth import FastLanguageModel
 
 def main():
@@ -34,8 +35,23 @@ def main():
     print(f"Base model: {args.base_model}")
     print(f"GGUF output directory: {args.gguf_dir}")
     print(f"Quantization method: {args.quantization}")
-    
     try:
+        # Check for cmake and build tools
+        try:
+            import shutil
+            cmake_path = shutil.which("cmake")
+            if cmake_path is None:
+                print("WARNING: 'cmake' not found in PATH. GGUF conversion requires cmake.")
+                print("Please install cmake and other build tools before proceeding.")
+                print("  Ubuntu/Debian: sudo apt-get install cmake build-essential")
+                print("  RHEL/CentOS: sudo yum install cmake gcc-c++")
+                print("  macOS: brew install cmake")
+                print("  Windows: Install CMake from https://cmake.org/download/")
+                print("\nAttempting to continue anyway...\n")
+        except:
+            # If we can't check for cmake, just continue
+            pass
+            
         # Load the base model
         print("Loading base model...")
         model, tokenizer = FastLanguageModel.from_pretrained(
@@ -44,13 +60,20 @@ def main():
             dtype=None,  # Auto-detect
             load_in_4bit=True,
         )
-        
-        # Load the fine-tuned LoRA adapters
+          # Load the fine-tuned LoRA adapters
         print(f"Loading LoRA adapters from {args.lora_dir}...")
+        # We need to load the saved model differently - first prepare PEFT model with default config
         model = FastLanguageModel.get_peft_model(
             model,
-            adapter_path=args.lora_dir,
+            r=16,  # Default LoRA rank
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            lora_alpha=16,
+            lora_dropout=0,
+            bias="none",
         )
+        # Then load the saved adapter weights
+        print("Loading adapter weights...")
+        model.load_adapter(args.lora_dir)
         
         # Convert to GGUF format
         print(f"Converting to GGUF with {args.quantization} quantization...")

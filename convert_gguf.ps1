@@ -3,10 +3,10 @@
 This PowerShell script converts a LoRA adapter to GGUF format for use with Ollama.
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$LoraDir,
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string]$GgufDir = $null
 )
 

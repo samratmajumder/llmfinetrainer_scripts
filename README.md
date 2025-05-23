@@ -232,6 +232,7 @@ python convert_to_gguf.py --lora-dir ./finetuned_mistral --gguf-dir ./mistral_gg
 ```
 
 Shell scripts are also provided for convenience:
+
 - `convert_gguf.sh` - Bash script for Linux/macOS
 - `convert_gguf.ps1` - PowerShell script for Windows
 

@@ -3,10 +3,13 @@
 This guide explains how to create and use datasets in raw text format for language model training.
 
 > ### New GGUF Conversion Tool
+>
 > If your training completed but GGUF conversion failed, you can use our new tool:
+>
 > ```
 > python convert_to_gguf.py --lora-dir ./finetuned_mistral
 > ```
+>
 > See the [GGUF Conversion](#gguf-conversion) section for details.
 
 ## What is Raw Text Format?
@@ -14,7 +17,9 @@ This guide explains how to create and use datasets in raw text format for langua
 Raw text format is a simple dataset structure used for continued pretraining of language models. Each entry contains a single "text" field with unstructured text content:
 
 ```json
-{"text": "Your text content goes here. This can be a paragraph or longer text passage."}
+{
+  "text": "Your text content goes here. This can be a paragraph or longer text passage."
+}
 ```
 
 This format is ideal for teaching language models general language patterns rather than specific instruction following behavior.
@@ -113,6 +118,7 @@ python convert_to_gguf.py --help
 ```
 
 Key options include:
+
 - `--lora-dir`: Directory containing the fine-tuned LoRA adapters (required)
 - `--gguf-dir`: Output directory for GGUF files (default: lora_dir/gguf)
 - `--base-model`: Base model name or path (default: unsloth/Mistral-Small-Instruct-2409)
