@@ -201,20 +201,104 @@ print(f"LoRA adapters saved to {output_dir}")
 if not args.skip_gguf:
     try:
         print("Converting model to GGUF format... (This requires cmake and build tools)")
+        
+        # Fix for llama.cpp build issues - manually build llama-quantize
+        import os
+        import sys
+        import subprocess
+        
+        print("Setting up llama.cpp build environment...")
+        
+        # Get the Unsloth cache directory where llama.cpp is downloaded
+        from pathlib import Path
+        import tempfile
+        
+        # Check if we're on Windows
+        is_windows = sys.platform.startswith("win")
+        
+        # Create a build directory
+        llama_cpp_dir = os.path.join(tempfile.gettempdir(), "llama_cpp_build")
+        os.makedirs(llama_cpp_dir, exist_ok=True)
+        print(f"Using build directory: {llama_cpp_dir}")
+        
+        # Clone llama.cpp if not already present
+        if not os.path.exists(os.path.join(llama_cpp_dir, "CMakeLists.txt")):
+            print("Cloning llama.cpp repository...")
+            clone_cmd = "git clone https://github.com/ggml-org/llama.cpp.git ."
+            subprocess.run(clone_cmd, shell=True, cwd=llama_cpp_dir, check=True)
+        
+        # Build llama.cpp using CMake
+        print("Building llama.cpp (this may take a few minutes)...")
+        
+        # Create build subdirectory
+        build_dir = os.path.join(llama_cpp_dir, "build")
+        os.makedirs(build_dir, exist_ok=True)
+        
+        # Run cmake
+        cmake_cmd = "cmake .."
+        if is_windows:
+            cmake_cmd = "cmake .. -G \"MinGW Makefiles\""
+        subprocess.run(cmake_cmd, shell=True, cwd=build_dir, check=True)
+        
+        # Run make
+        make_cmd = "make" if not is_windows else "mingw32-make"
+        subprocess.run(make_cmd, shell=True, cwd=build_dir, check=True)
+        
+        print("llama.cpp build completed successfully.")
+        
+        # Now continue with the GGUF conversion using Unsloth
         FastLanguageModel.for_inference(model)  # Enable inference mode
+        
+        # Pass our built llama-quantize path
+        quantize_path = os.path.join(build_dir, "bin", "quantize")
+        if is_windows:
+            quantize_path += ".exe"
+        
+        if not os.path.exists(quantize_path):
+            # Check for newer versions of the binary name
+            alt_quantize_path = os.path.join(build_dir, "bin", "llama-quantize")
+            if is_windows:
+                alt_quantize_path += ".exe"
+            
+            if os.path.exists(alt_quantize_path):
+                quantize_path = alt_quantize_path
+            else:
+                print(f"Warning: Could not find quantize binary at {quantize_path} or {alt_quantize_path}")
+        
+        print(f"Using quantize binary at: {quantize_path}")
+        
         model.save_pretrained_gguf(
             gguf_dir,
             tokenizer,
             quantization_method=quantization_method,
+            llama_cpp_dir=build_dir,  # Use our built version
         )
         print(f"Quantized GGUF model saved to {gguf_dir}")
+        
+        # Create Modelfile for Ollama
+        modelfile_path = os.path.join(gguf_dir, "Modelfile")
+        gguf_files = [f for f in os.listdir(gguf_dir) if f.endswith('.gguf')]
+        if gguf_files:
+            with open(modelfile_path, 'w', encoding='utf-8') as f:
+                f.write(f"FROM ./{gguf_files[0]}\n")
+                f.write('TEMPLATE """{{ .Prompt }}"""\n')
+                f.write('PARAMETER stop "<|eot_id|>"\n')
+                f.write('PARAMETER context_length 16384\n')
+                f.write('PARAMETER temperature 0.7\n')
+            print(f"Created Ollama Modelfile at {modelfile_path}")
+            
+            model_name = os.path.basename(os.path.normpath(output_dir))
+            print(f"\nTo use with Ollama:\ncd {gguf_dir}")
+            print(f"ollama create {model_name.lower().replace('-', '_')} -f Modelfile")
+        
     except Exception as e:
         print(f"GGUF conversion failed: {e}")
         print("\nTo convert to GGUF format, you need to install cmake and build tools:")
-        print("  Ubuntu/Debian: sudo apt-get install cmake build-essential")
-        print("  RHEL/CentOS: sudo yum install cmake gcc-c++")
-        print("  macOS: brew install cmake")
-        print("  Windows: Install CMake from https://cmake.org/download/")
-        print("\nAfter installing dependencies, you can manually convert the model later.")
+        print("  Ubuntu/Debian: sudo apt-get install cmake build-essential git")
+        print("  RHEL/CentOS: sudo yum install cmake gcc-c++ git")
+        print("  macOS: brew install cmake git")
+        print("  Windows: Install CMake, Git, and MinGW from their respective websites")
+        print("\nYou can still use the fine-tuned model with the test_finetuned_model.py script,")
+        print("or convert it to GGUF later using the convert_to_gguf.py script.")
 else:
     print("Skipping GGUF conversion as requested with --skip-gguf flag.")
