@@ -1,0 +1,3 @@
+FROM ./Mistral-Small-Instruct-2409-Q4_K_M.gguf
+TEMPLATE """{{ .Prompt }}"""
+PARAMETER stop "<|eot_id|>"

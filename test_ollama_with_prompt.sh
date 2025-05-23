@@ -1,0 +1,1 @@
+curl http://localhost:11434/api/generate -d '{"model": "my_mistral_finetuned", "prompt": "The forest was dark and silent. A lone traveler moved cautiously through the trees."}'
