@@ -2,6 +2,14 @@
 
 This repository contains tools and scripts for preparing data and fine-tuning language models using Unsloth.
 
+## Features
+
+- Process stories and text into training datasets
+- Fine-tune language models using Unsloth's efficient methods
+- Support for multiple training formats including raw text mode
+- Convert fine-tuned models to GGUF format for use with Ollama
+- Utilities for cleaning and validating datasets
+
 ## Installation
 
 You have two options:
@@ -208,3 +216,28 @@ Ensure the GGUF file and Modelfile are correctly formatted. Verify Ollama is run
 
 Slow Training:
 Use a more powerful GPU or reduce dataset size for faster iteration during testing.
+
+### Manual GGUF Conversion
+
+If the GGUF conversion step was skipped or failed during training, you can use the standalone conversion tool:
+
+```bash
+# Linux/macOS
+python convert_to_gguf.py --lora-dir ./finetuned_mistral --gguf-dir ./mistral_gguf
+```
+
+```powershell
+# Windows
+python convert_to_gguf.py --lora-dir ./finetuned_mistral --gguf-dir ./mistral_gguf
+```
+
+Shell scripts are also provided for convenience:
+- `convert_gguf.sh` - Bash script for Linux/macOS
+- `convert_gguf.ps1` - PowerShell script for Windows
+
+#### Command Options:
+
+- `--lora-dir`: Directory containing the fine-tuned LoRA adapters (required)
+- `--gguf-dir`: Output directory for GGUF files (default: lora_dir/gguf)
+- `--base-model`: Base model name or path (default: unsloth/Mistral-Small-Instruct-2409)
+- `--quantization`: Quantization method (default: q4_k_m)

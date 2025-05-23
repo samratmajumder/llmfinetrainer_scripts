@@ -2,6 +2,13 @@
 
 This guide explains how to create and use datasets in raw text format for language model training.
 
+> ### New GGUF Conversion Tool
+> If your training completed but GGUF conversion failed, you can use our new tool:
+> ```
+> python convert_to_gguf.py --lora-dir ./finetuned_mistral
+> ```
+> See the [GGUF Conversion](#gguf-conversion) section for details.
+
 ## What is Raw Text Format?
 
 Raw text format is a simple dataset structure used for continued pretraining of language models. Each entry contains a single "text" field with unstructured text content:
@@ -73,6 +80,45 @@ If you encounter format errors:
 1. Check that your dataset contains a "text" field in each JSON line
 2. Use the clean_dataset.py tool to fix formatting issues
 3. Make sure there are no control characters or invalid structures in your text
+
+## GGUF Conversion
+
+If the GGUF conversion step failed during training or you used the `--skip-gguf` flag, you can convert your fine-tuned model separately using the included conversion tool.
+
+### Using the Conversion Tool
+
+```bash
+# For Linux/macOS
+python convert_to_gguf.py --lora-dir ./finetuned_mistral --gguf-dir ./mistral_gguf
+
+# Or use the shell script
+chmod +x convert_gguf.sh
+./convert_gguf.sh ./finetuned_mistral ./mistral_gguf
+```
+
+```powershell
+# For Windows
+python convert_to_gguf.py --lora-dir ./finetuned_mistral --gguf-dir ./mistral_gguf
+
+# Or use the PowerShell script
+.\convert_gguf.ps1 -LoraDir .\finetuned_mistral -GgufDir .\mistral_gguf
+```
+
+### Additional Options
+
+The conversion tool supports various options:
+
+```
+python convert_to_gguf.py --help
+```
+
+Key options include:
+- `--lora-dir`: Directory containing the fine-tuned LoRA adapters (required)
+- `--gguf-dir`: Output directory for GGUF files (default: lora_dir/gguf)
+- `--base-model`: Base model name or path (default: unsloth/Mistral-Small-Instruct-2409)
+- `--quantization`: Quantization method to use: q4_k_m, q5_k_m, q8_0, q2_k (default: q4_k_m)
+
+The tool will also create an Ollama-compatible Modelfile in the output directory.
 
 ## Example Dataset
 
