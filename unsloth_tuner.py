@@ -123,22 +123,18 @@ if data_format == "raw_text":
         return {"input_ids": examples["text"]}
     
     formatted_dataset = dataset.map(format_dataset_for_raw_text, batched=True)
-    
-    trainer = SFTTrainer(
+      trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=formatted_dataset,
-        max_seq_length=max_seq_length,
         args=training_args,
         packing=False,  # Disable packing for raw text
     )
-else:
-    # Regular instruction format trainer
+else:    # Regular instruction format trainer
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
         train_dataset=dataset,
-        max_seq_length=max_seq_length,
         args=training_args,
         packing=False,  # Disable packing for simplicity
     )
