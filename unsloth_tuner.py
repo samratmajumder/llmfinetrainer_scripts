@@ -117,26 +117,50 @@ training_args = TrainingArguments(
 # Instead, we need to ensure the dataset is properly formatted
 if data_format == "raw_text":
     # Format for raw text training
-    # For raw text, we need to rename the column to 'input_ids' for SFTTrainer
+    # We need to properly format the data for SFTTrainer to avoid tokenization issues
     def format_dataset_for_raw_text(examples):
-        # Simply pass the text through without additional formatting
-        return {"input_ids": examples["text"]}
+        # Make sure text is properly processed - convert to string, strip any problematic characters
+        processed_texts = []
+        for text in examples["text"]:
+            if text is None:
+                processed_texts.append("")
+                continue
+                
+            # Convert to string if not already
+            if not isinstance(text, str):
+                text = str(text)
+                
+            # Clean the text - remove any problematic characters
+            processed_texts.append(text.strip())
+        
+        return {"text": processed_texts}
     
     formatted_dataset = dataset.map(format_dataset_for_raw_text, batched=True)
+    
+    # Now tokenize the formatted dataset
+    def tokenize_function(examples):
+        return tokenizer(examples["text"], truncation=True, padding=False)
+    
+    tokenized_dataset = formatted_dataset.map(tokenize_function, batched=True, remove_columns=["text"])
+    
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
-        train_dataset=formatted_dataset,
+        train_dataset=tokenized_dataset,
         args=training_args,
-        # Remove packing parameter as it's not supported
+        # Remove tokenizer and other unsupported parameters
     )
 else:    # Regular instruction format trainer
+    # For completion format, tokenize the dataset
+    def tokenize_function(examples):
+        return tokenizer(examples["text"], truncation=True, padding=False)
+    
+    tokenized_dataset = dataset.map(tokenize_function, batched=True, remove_columns=["text"])
+    
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
-        train_dataset=dataset,
+        train_dataset=tokenized_dataset,
         args=training_args,
-        # Remove packing parameter as it's not supported
+        # Remove tokenizer and other unsupported parameters
     )
 
 # Start fine-tuning
