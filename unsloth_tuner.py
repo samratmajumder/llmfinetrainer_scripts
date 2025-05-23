@@ -65,7 +65,7 @@ dataset = load_dataset("json", data_files=dataset_path, split="train")
 tokenizer = get_chat_template(
     tokenizer,
     chat_template="mistral",  # Use Mistral's chat template
-    mapping={"role": "user", "content": "prompt", "response": "completion"},
+    mapping={"role": "user", "content": "prompt", "response": "completion", "user": "user"},
 )
 
 def format_prompts(examples):
