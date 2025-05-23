@@ -113,7 +113,7 @@ training_args = TrainingArguments(
 )
 
 # Initialize the trainer
-# The 'dataset_text_field' parameter is no longer supported in newer versions of SFTTrainer
+# The 'dataset_text_field' and 'packing' parameters are no longer supported in newer versions of SFTTrainer
 # Instead, we need to ensure the dataset is properly formatted
 if data_format == "raw_text":
     # Format for raw text training
@@ -128,7 +128,7 @@ if data_format == "raw_text":
         tokenizer=tokenizer,
         train_dataset=formatted_dataset,
         args=training_args,
-        packing=False,  # Disable packing for raw text
+        # Remove packing parameter as it's not supported
     )
 else:    # Regular instruction format trainer
     trainer = SFTTrainer(
@@ -136,7 +136,7 @@ else:    # Regular instruction format trainer
         tokenizer=tokenizer,
         train_dataset=dataset,
         args=training_args,
-        packing=False,  # Disable packing for simplicity
+        # Remove packing parameter as it's not supported
     )
 
 # Start fine-tuning
