@@ -27,6 +27,8 @@ parser.add_argument("--batch-size", type=int, default=2,
                     help="Per device batch size (default: 2)")
 parser.add_argument("--format", type=str, choices=["completion", "raw_text"], default="completion",
                     help="Dataset format: 'completion' or 'raw_text' (default: completion)")
+parser.add_argument("--skip-gguf", action="store_true",
+                    help="Skip GGUF conversion (use if dependencies are missing)")
 
 args = parser.parse_args()
 
@@ -61,7 +63,17 @@ model = FastLanguageModel.get_peft_model(
 )
 
 # Load and format the dataset
-dataset = load_dataset("json", data_files=dataset_path, split="train")
+try:
+    dataset = load_dataset("json", data_files=dataset_path, split="train")
+    print(f"Successfully loaded dataset from {dataset_path}")
+    print(f"Dataset contains {len(dataset)} examples")
+    print(f"Dataset columns: {dataset.column_names}")
+except Exception as e:
+    print(f"Error loading dataset: {e}")
+    print("Make sure your dataset is properly formatted JSON Lines (.jsonl)")
+    print("For raw_text format, each line should contain: {\"text\": \"Your text content here\"}")
+    print("You can use clean_dataset.py to fix formatting issues")
+    exit(1)
 
 # Check for format and process accordingly
 data_format = args.format
@@ -70,8 +82,20 @@ print(f"Processing dataset in '{data_format}' format...")
 if data_format == "raw_text":
     # Raw text format is already in the right structure for continued pretraining
     if "text" not in dataset.column_names:
-        raise ValueError("Raw text format selected but 'text' field not found in dataset")
-    # No additional processing needed for raw_text format
+        print("ERROR: Raw text format selected but 'text' field not found in dataset")
+        print(f"Available fields: {dataset.column_names}")
+        print("Please check your dataset format or process it with clean_dataset.py")
+        exit(1)
+    
+    # Print a sample of the raw text to help with debugging
+    print("\nSample from dataset (first entry):")
+    try:
+        sample_text = dataset[0]["text"]
+        # Show first 100 characters
+        print(f"Text (truncated): {sample_text[:100]}...")
+    except Exception as e:
+        print(f"Error accessing sample: {e}")
+    print()
 else:
     # Apply chat template to format the dataset for completion format
     tokenizer = get_chat_template(
@@ -173,11 +197,24 @@ model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
 print(f"LoRA adapters saved to {output_dir}")
 
-# Save to GGUF format for Ollama
-FastLanguageModel.for_inference(model)  # Enable inference mode
-model.save_pretrained_gguf(
-    gguf_dir,
-    tokenizer,
-    quantization_method=quantization_method,
-)
-print(f"Quantized GGUF model saved to {gguf_dir}")
+# Save to GGUF format for Ollama (if not skipped)
+if not args.skip_gguf:
+    try:
+        print("Converting model to GGUF format... (This requires cmake and build tools)")
+        FastLanguageModel.for_inference(model)  # Enable inference mode
+        model.save_pretrained_gguf(
+            gguf_dir,
+            tokenizer,
+            quantization_method=quantization_method,
+        )
+        print(f"Quantized GGUF model saved to {gguf_dir}")
+    except Exception as e:
+        print(f"GGUF conversion failed: {e}")
+        print("\nTo convert to GGUF format, you need to install cmake and build tools:")
+        print("  Ubuntu/Debian: sudo apt-get install cmake build-essential")
+        print("  RHEL/CentOS: sudo yum install cmake gcc-c++")
+        print("  macOS: brew install cmake")
+        print("  Windows: Install CMake from https://cmake.org/download/")
+        print("\nAfter installing dependencies, you can manually convert the model later.")
+else:
+    print("Skipping GGUF conversion as requested with --skip-gguf flag.")
