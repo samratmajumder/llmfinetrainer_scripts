@@ -1,4 +1,40 @@
-Run the Fine-Tuning Script
+# LLM Fine-Tuning Collection
+
+This repository contains tools and scripts for preparing data and fine-tuning language models using Unsloth.
+
+## Step 1: Prepare Your Training Data
+
+Before you can fine-tune a model, you need to prepare your data in the right format. Use the `story_processor.py` script to convert your stories into a training dataset.
+
+### Install Requirements
+
+```bash
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+```
+
+### Process Stories
+
+The script can process various file formats (docx, txt, html, pptx) and automatically:
+
+- Extract text from documents
+- Split stories into optimal chunks based on token count
+- Create training examples in various formats (Alpaca, ChatML, completion)
+
+```bash
+python story_processor.py --folder /path/to/your/stories --output training_data.jsonl --format alpaca --max-tokens 2048 --overlap 1
+```
+
+#### Command Options:
+
+- `--folder`: Path to the folder containing story files (required)
+- `--output`: Output JSONL file path (default: "training_data.jsonl")
+- `--max-tokens`: Maximum tokens per chunk (default: 2048)
+- `--overlap`: Number of paragraphs to overlap between chunks (default: 1)
+- `--format`: Output format type - "alpaca", "chatml", or "completion" (default: "alpaca")
+
+## Step 2: Fine-Tune the Model
+
 Update the Script:
 Replace dataset_path with the path to your training_data.jsonl file (e.g., "C:/Users/You/training_data.jsonl" or "/home/you/training_data.jsonl").
 
