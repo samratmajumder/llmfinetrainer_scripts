@@ -253,8 +253,7 @@ if not args.skip_gguf:
         quantize_path = os.path.join(build_dir, "bin", "quantize")
         if is_windows:
             quantize_path += ".exe"
-        
-        if not os.path.exists(quantize_path):
+          if not os.path.exists(quantize_path):
             # Check for newer versions of the binary name
             alt_quantize_path = os.path.join(build_dir, "bin", "llama-quantize")
             if is_windows:
@@ -264,14 +263,31 @@ if not args.skip_gguf:
                 quantize_path = alt_quantize_path
             else:
                 print(f"Warning: Could not find quantize binary at {quantize_path} or {alt_quantize_path}")
+                
+                # Try looking directly in build directory
+                for root, dirs, files in os.walk(build_dir):
+                    for file in files:
+                        if file == "llama-quantize" or file == "llama-quantize.exe" or file == "quantize" or file == "quantize.exe":
+                            quantize_path = os.path.join(root, file)
+                            print(f"Found quantize binary: {quantize_path}")
+                            break
         
         print(f"Using quantize binary at: {quantize_path}")
+          # Set environment variable so that Unsloth uses our llama-quantize binary
+        if os.path.exists(quantize_path):
+            # Get the directory containing the binary
+            bin_dir = os.path.dirname(quantize_path)
+            # Add to PATH environment variable
+            if is_windows:
+                os.environ["PATH"] = f"{bin_dir};{os.environ.get('PATH', '')}"
+            else:
+                os.environ["PATH"] = f"{bin_dir}:{os.environ.get('PATH', '')}"
+            print(f"Added {bin_dir} to PATH")
         
         model.save_pretrained_gguf(
             gguf_dir,
             tokenizer,
-            quantization_method=quantization_method,
-            llama_cpp_dir=build_dir,  # Use our built version
+            quantization_method=quantization_method
         )
         print(f"Quantized GGUF model saved to {gguf_dir}")
         
